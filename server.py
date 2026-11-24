@@ -21,7 +21,7 @@
     TTS_TIMEOUT      合成超时基数（秒），默认 20，长文本按字数上浮
     TTS_BASE_URL     返回 URL 的主机前缀，留空则取请求的 base_url
     TTS_QUEUE        同时合成数，默认 1（串行，避免同 IP 触发限流）
-    TTS_KEEP_FILES   清理白名单（逗号分隔），默认 silence4s.mp3
+    TTS_KEEP_FILES   常驻文件白名单（逗号分隔），列入者不参与任何清理，默认 silence4s.mp3
     TTS_PRUNE_TTL    合成时顺带清理的过期时长（秒），默认 3600
 """
 
@@ -45,8 +45,8 @@ TIMEOUT = float(os.getenv("TTS_TIMEOUT", "20"))
 BASE_URL = os.getenv("TTS_BASE_URL", "").rstrip("/")
 QUEUE = max(1, int(os.getenv("TTS_QUEUE", "1")))
 
-# 清理白名单：这些固定资源在任何清理路径下都不删除
-# 解析结果为空时回退默认值，避免被误设为空串导致静音文件被删
+# 常驻文件白名单：文件名在此集合中的文件不参与清理，适用于静音之外的各类固定资源
+# 静音文件另有 silence 前缀豁免，不依赖此白名单；解析结果为空时回退默认值，避免误设空串
 KEEP_FILES = {
     name.strip()
     for name in os.getenv("TTS_KEEP_FILES", "silence4s.mp3").split(",")
@@ -143,7 +143,7 @@ def _prune_cache(keep: set[str], grace: float) -> int:
     for f in CACHE_DIR.glob("*.mp3"):
         if f.name in keep or f.name in KEEP_FILES:
             continue
-        # 静音资源属于播放链路的基础设施，任何配置下都不清理
+        # 静音文件属于播放链路的基础设施，按前缀豁免，不依赖白名单配置
         if f.name.startswith("silence"):
             continue
         try:

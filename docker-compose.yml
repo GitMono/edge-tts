@@ -36,7 +36,7 @@ services:
       - TTS_TIMEOUT=20
       # 并发合成数：1 表示串行，降低被上游限流的概率
       - TTS_QUEUE=1
-      # 清理白名单：这些文件在任何清理路径下都不删除
+      # 常驻文件白名单：列入的文件不参与任何清理；静音文件另有 silence 前缀豁免
       - TTS_KEEP_FILES=silence4s.mp3,silencestop.mp3
       # 过期时长（秒）：客户端没来得及调 /prune 时，超过此时长的残留会被顺带删除
       - TTS_PRUNE_TTL=3600

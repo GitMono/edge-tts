@@ -107,7 +107,7 @@ docker compose up -d --force-recreate
 | 合成返回 403 或频繁超时 | `TTS_QUEUE` 调回 1、检查出口 IP 是否被限流、适当加大 `TTS_TIMEOUT` |
 | 容器状态一直 `unhealthy` | `docker compose logs` 看 uvicorn 是否起来、8099 是否被占用 |
 | 缓存文件越来越多 | 调用方是否定期调 `/prune`；`TTS_PRUNE_TTL` 是否被设得过大 |
-| 静音文件消失导致播报异常 | 是否已把文件名加进 `TTS_KEEP_FILES`，见[关于静音文件](#关于静音文件) |
+| 需要长期保留的文件被清理 | 是否已加进 `TTS_KEEP_FILES`；静音文件靠 `silence` 前缀豁免，无需配置 |
 
 ## 接口
 
@@ -161,13 +161,18 @@ docker compose up -d --force-recreate
 | `TTS_CACHE_DIR` | `/cache` | 缓存目录 |
 | `TTS_TIMEOUT` | `20` | 合成超时基数（秒），实际按字数上浮 |
 | `TTS_QUEUE` | `1` | 并发合成数，1 为串行 |
-| `TTS_KEEP_FILES` | `silence4s.mp3` | 清理白名单，逗号分隔 |
+| `TTS_KEEP_FILES` | `silence4s.mp3` | 常驻文件白名单，逗号分隔；列入者不参与任何清理 |
 | `TTS_PRUNE_TTL` | `3600` | 残留文件过期时间（秒） |
 | `TTS_BASE_URL` | 空 | 返回 URL 的前缀，为空时按请求 Host 推断 |
 
-## 关于静音文件
+## 关于常驻文件
 
-分段播报常在音频列表尾部追加静音，用于给停止指令留出窗口。这类文件由调用方自行生成并放入缓存目录，同时加进 `TTS_KEEP_FILES`，否则会被清理逻辑删除。
+缓存目录里的文件默认会被 `/prune` 与 TTL 回收，但有两类例外：
+
+- **静音文件**：名字以 `silence` 开头的文件不参与清理。这是内置规则，无需配置
+- **常驻文件**：通过 `TTS_KEEP_FILES` 声明的文件同样不参与清理，适用于静音之外的固定素材，例如提示音、开场音
+
+分段播报常在音频尾部追加静音以留出停止窗口，这类文件因前缀规则天然受保护；其余需要长期保留的资源则要显式加进白名单，否则会被回收。
 
 ## 许可
 
