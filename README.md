@@ -1,6 +1,6 @@
 # edge-tts TTS Service
 
-**English** | [简体中文](README.zh-CN.md)
+**English** | [简体中文](README.zh.md)
 
 Wraps Microsoft Edge's online TTS into a cached HTTP endpoint, so speech-playback applications can synthesize audio on demand.
 
