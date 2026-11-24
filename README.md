@@ -107,7 +107,7 @@ docker compose up -d --force-recreate
 | Synthesis returns 403 or times out often | Set `TTS_QUEUE` back to 1, check whether the egress IP is throttled, raise `TTS_TIMEOUT` |
 | Container stays `unhealthy` | `docker compose logs` to see whether uvicorn started, whether 8099 is occupied |
 | Cache keeps growing | Whether the caller invokes `/prune` periodically, and whether `TTS_PRUNE_TTL` is set too high |
-| Files that should persist get deleted | Whether they were added to `TTS_KEEP_FILES`; silence files are exempt by their `silence` prefix, no config needed |
+| Files that should persist get deleted | Whether they were added to `TTS_KEEP_FILES` (empty by default; silence files need explicit listing too) |
 
 ## API
 
@@ -167,12 +167,15 @@ Deletes cached files that are not in `keep` and are older than the grace period.
 
 ## About Persistent Files
 
-Files in the cache directory are reclaimed by `/prune` and the TTL sweep, with two exceptions:
+Files in the cache directory are reclaimed by `/prune` and the TTL sweep, with two exceptions: names passed in the caller's `keep` list, and names declared in `TTS_KEEP_FILES`.
 
-- **Silence files**: names starting with `silence` are never cleaned up. This is built in and needs no configuration
-- **Persistent files**: names listed in `TTS_KEEP_FILES` are equally exempt, covering fixed assets other than silence, such as prompt tones or intro clips
+The whitelist is empty by default, so every fixed asset you want to keep must be listed explicitly — including the silence files used by segmented playback:
 
-Segmented playback often appends silence to the audio tail to leave room for a stop command; those files are protected by the prefix rule. Any other resource you need to keep must be added to the whitelist explicitly, otherwise it will be reclaimed.
+```bash
+TTS_KEEP_FILES=silence4s.mp3,silencestop.mp3
+```
+
+If omitted, those files get reclaimed and the caller has to regenerate or re-synthesize them.
 
 ## License
 

@@ -107,7 +107,7 @@ docker compose up -d --force-recreate
 | 合成返回 403 或频繁超时 | `TTS_QUEUE` 调回 1、检查出口 IP 是否被限流、适当加大 `TTS_TIMEOUT` |
 | 容器状态一直 `unhealthy` | `docker compose logs` 看 uvicorn 是否起来、8099 是否被占用 |
 | 缓存文件越来越多 | 调用方是否定期调 `/prune`；`TTS_PRUNE_TTL` 是否被设得过大 |
-| 需要长期保留的文件被清理 | 是否已加进 `TTS_KEEP_FILES`；静音文件靠 `silence` 前缀豁免，无需配置 |
+| 需要长期保留的文件被清理 | 是否已加进 `TTS_KEEP_FILES`（白名单默认为空，静音文件同样要显式列出） |
 
 ## 接口
 
@@ -167,12 +167,15 @@ docker compose up -d --force-recreate
 
 ## 关于常驻文件
 
-缓存目录里的文件默认会被 `/prune` 与 TTL 回收，但有两类例外：
+缓存目录里的文件默认会被 `/prune` 与 TTL 回收，只有两类例外：客户端在 `/prune` 的 `keep` 中指定保留的，以及通过 `TTS_KEEP_FILES` 声明的。
 
-- **静音文件**：名字以 `silence` 开头的文件不参与清理。这是内置规则，无需配置
-- **常驻文件**：通过 `TTS_KEEP_FILES` 声明的文件同样不参与清理，适用于静音之外的固定素材，例如提示音、开场音
+白名单默认为空，所有需要长期保留的固定素材都必须显式列出，包括分段播报使用的静音文件：
 
-分段播报常在音频尾部追加静音以留出停止窗口，这类文件因前缀规则天然受保护；其余需要长期保留的资源则要显式加进白名单，否则会被回收。
+```bash
+TTS_KEEP_FILES=silence4s.mp3,silencestop.mp3
+```
+
+漏配的后果是这些文件被回收后，调用方需要重新生成或重新合成。
 
 ## 许可
 

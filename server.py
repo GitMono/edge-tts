@@ -142,9 +142,6 @@ def _prune_cache(keep: set[str], grace: float) -> int:
     for f in CACHE_DIR.glob("*.mp3"):
         if f.name in keep or f.name in KEEP_FILES:
             continue
-        # 静音文件属于播放链路的基础设施，不参与清理
-        if f.name.startswith("silence"):
-            continue
         try:
             if grace > 0 and now - f.stat().st_mtime < grace:
                 continue
