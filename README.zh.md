@@ -55,14 +55,6 @@ compose 把镜像构建、端口映射、缓存卷和环境变量收敛到一处
 将以下内容保存为 `docker-compose.yml`，置于项目根目录后按需调整：
 
 ```yaml
-# edge-tts 部署配置
-#
-# 使用前把 TTS_BASE_URL 改成音箱可达的地址（服务返回给调用方的音频直链前缀）：
-#   export TTS_BASE_URL=http://192.168.1.10:8099
-#   docker compose up -d
-#
-# 镜像可本地构建（docker build -t edge-tts:latest .）或从别处导入（docker load）
-
 services:
   edge-tts:
     image: edge-tts:latest
