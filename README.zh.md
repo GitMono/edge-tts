@@ -27,7 +27,7 @@ docker run -d --name edge-tts -p 8099:8099 --restart unless-stopped \
   edge-tts:latest
 ```
 
-或用 compose（需先设置 `TTS_BASE_URL`）：
+或用 compose（先按下方[配置说明](#配置说明)创建 `docker-compose.yml`）：
 
 ```bash
 export TTS_BASE_URL=http://192.168.1.10:8099
@@ -42,7 +42,7 @@ docker build --build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple 
 
 ## docker-compose
 
-`docker-compose.yml` 把镜像构建、端口映射、缓存卷和环境变量收敛到一处，适合长期部署。单次试跑用上面的 `docker run` 即可；需要开机自启、反复调参或与其他服务编排时用 compose。
+compose 把镜像构建、端口映射、缓存卷和环境变量收敛到一处，适合长期部署。单次试跑用上面的 `docker run` 即可；需要开机自启、反复调参或与其他服务编排时用 compose。
 
 ### 前置条件
 
@@ -52,20 +52,75 @@ docker build --build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple 
 
 ### 配置说明
 
-| 项 | 取值 | 说明 |
-|---|---|---|
-| 服务名 | `edge-tts` | 单服务，容器名固定为 `edge-tts` |
-| 镜像 | `edge-tts:latest` | 配合 `build.context: .`，`up` 时本地构建，无需先手动 build |
-| 构建参数 | `PIP_INDEX_URL` | 从环境变量透传，大陆网络可设为清华源 |
-| 端口 | `8099:8099` | 宿主机与容器同端口；改成其他宿主机端口时，`TTS_BASE_URL` 要同步改 |
-| 数据卷 | `./cache:/cache` | 缓存落在项目目录下，容器重建不丢；容器内路径由 `TTS_CACHE_DIR` 决定 |
-| 关键环境变量 | `TTS_BASE_URL` | 返回给调用方的 URL 前缀，**必须设备可达** |
-| 其他环境变量 | `TTS_VOICE` / `TTS_RATE` | 音色与语速，compose 里已给默认值，可覆盖 |
-| 限流相关 | `TTS_QUEUE` / `TTS_TIMEOUT` | 并发数默认 1（串行）；超时基数 20 秒，按字数自动上浮 |
-| 健康检查 | `/healthz` | 每 30 秒探测一次，启动宽限 10 秒 |
-| 日志 | `json-file` | 单文件 10MB、最多 3 个，避免长期运行占满磁盘 |
+将以下内容保存为 `docker-compose.yml`，置于项目根目录后按需调整：
 
-完整的变量清单见下方[环境变量](#环境变量)一节。
+```yaml
+# edge-tts 部署配置
+#
+# 使用前把 TTS_BASE_URL 改成音箱可达的地址（服务返回给调用方的音频直链前缀）：
+#   export TTS_BASE_URL=http://192.168.1.10:8099
+#   docker compose up -d
+#
+# 镜像可本地构建（docker build -t edge-tts:latest .）或从别处导入（docker load）
+
+services:
+  edge-tts:
+    image: edge-tts:latest
+    container_name: edge-tts
+    build:
+      context: .
+      args:
+        # 大陆网络可换成 https://pypi.tuna.tsinghua.edu.cn/simple
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+
+    ports:
+      - "8099:8099"
+
+    volumes:
+      # mp3 缓存与配置同目录，方便备份和定期清理
+      - ./cache:/cache
+
+    environment:
+      - TZ=Asia/Shanghai
+      # 音色：zh-CN-XiaoyiNeural（女声）/ zh-CN-XiaoxiaoNeural（更自然）/ zh-CN-YunxiNeural（男声）
+      - TTS_VOICE=${TTS_VOICE:-zh-CN-XiaoxiaoNeural}
+      # 语速：范围通常 -50%~+100%
+      - TTS_RATE=${TTS_RATE:-+5%}
+      # 单次文本上限，超过直接 413，避免误喂超长文本
+      - TTS_MAX_CHARS=8000
+      - TTS_CACHE_DIR=/cache
+      # 合成超时基数（秒），长文本会按字数自动上浮
+      - TTS_TIMEOUT=20
+      # 并发合成数：1 表示串行，降低被上游限流的概率
+      - TTS_QUEUE=1
+      # 常驻文件白名单：列入的文件不参与任何清理，静音文件也必须显式列出
+      - TTS_KEEP_FILES=silence4s.mp3,silencestop.mp3
+      # 过期时长（秒）：客户端没来得及调 /prune 时，超过此时长的残留会被顺带删除
+      - TTS_PRUNE_TTL=3600
+      # 返回给调用方的 URL 前缀，必须是播放设备可达的地址
+      - TTS_BASE_URL=${TTS_BASE_URL:-http://localhost:8099}
+
+    restart: unless-stopped
+
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8099/healthz',timeout=3)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+```
+
+三处需要确认：`TTS_BASE_URL` 必须是播放设备可达的地址；`TTS_KEEP_FILES` 默认为空，静音文件也要显式列出；`TTS_QUEUE` 保持 1 以避免触发上游限流。完整变量清单见[环境变量](#环境变量)。
 
 ### 常用操作
 

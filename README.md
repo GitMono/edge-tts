@@ -27,7 +27,7 @@ docker run -d --name edge-tts -p 8099:8099 --restart unless-stopped \
   edge-tts:latest
 ```
 
-Or with compose (set `TTS_BASE_URL` first):
+Or with compose (create `docker-compose.yml` per [Configuration](#configuration) first):
 
 ```bash
 export TTS_BASE_URL=http://192.168.1.10:8099
@@ -42,7 +42,7 @@ docker build --build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple 
 
 ## docker-compose
 
-`docker-compose.yml` consolidates image build, port mapping, cache volume and environment into one file, which suits long-running deployments. Use the `docker run` form above for a quick trial; reach for compose when you need restart-on-boot, repeated tuning, or orchestration alongside other services.
+Compose consolidates image build, port mapping, cache volume and environment into one file, which suits long-running deployments. Use the `docker run` form above for a quick trial; reach for compose when you need restart-on-boot, repeated tuning, or orchestration alongside other services.
 
 ### Prerequisites
 
@@ -52,20 +52,75 @@ docker build --build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple 
 
 ### Configuration
 
-| Item | Value | Notes |
-|---|---|---|
-| Service | `edge-tts` | Single service, container name fixed to `edge-tts` |
-| Image | `edge-tts:latest` | Paired with `build.context: .`, built locally on `up`; no manual build needed |
-| Build arg | `PIP_INDEX_URL` | Passed through from the environment; use a mirror where needed |
-| Port | `8099:8099` | Same port inside and out; change `TTS_BASE_URL` if you remap the host port |
-| Volume | `./cache:/cache` | Cache lives in the project directory and survives container rebuilds; the in-container path is set by `TTS_CACHE_DIR` |
-| Key variable | `TTS_BASE_URL` | URL prefix returned to callers, **must be reachable by the device** |
-| Other variables | `TTS_VOICE` / `TTS_RATE` | Voice and rate; defaults are set in the compose file and can be overridden |
-| Rate limiting | `TTS_QUEUE` / `TTS_TIMEOUT` | Concurrency defaults to 1 (serial); timeout base is 20 s and scales with text length |
-| Health check | `/healthz` | Probed every 30 s, with a 10 s start grace period |
-| Logging | `json-file` | 10 MB per file, 3 files max, to keep disk usage bounded |
+Save the following as `docker-compose.yml` in the project root and adjust as needed:
 
-See [Environment Variables](#environment-variables) for the full list.
+```yaml
+# edge-tts 部署配置
+#
+# 使用前把 TTS_BASE_URL 改成音箱可达的地址（服务返回给调用方的音频直链前缀）：
+#   export TTS_BASE_URL=http://192.168.1.10:8099
+#   docker compose up -d
+#
+# 镜像可本地构建（docker build -t edge-tts:latest .）或从别处导入（docker load）
+
+services:
+  edge-tts:
+    image: edge-tts:latest
+    container_name: edge-tts
+    build:
+      context: .
+      args:
+        # 大陆网络可换成 https://pypi.tuna.tsinghua.edu.cn/simple
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+
+    ports:
+      - "8099:8099"
+
+    volumes:
+      # mp3 缓存与配置同目录，方便备份和定期清理
+      - ./cache:/cache
+
+    environment:
+      - TZ=Asia/Shanghai
+      # 音色：zh-CN-XiaoyiNeural（女声）/ zh-CN-XiaoxiaoNeural（更自然）/ zh-CN-YunxiNeural（男声）
+      - TTS_VOICE=${TTS_VOICE:-zh-CN-XiaoxiaoNeural}
+      # 语速：范围通常 -50%~+100%
+      - TTS_RATE=${TTS_RATE:-+5%}
+      # 单次文本上限，超过直接 413，避免误喂超长文本
+      - TTS_MAX_CHARS=8000
+      - TTS_CACHE_DIR=/cache
+      # 合成超时基数（秒），长文本会按字数自动上浮
+      - TTS_TIMEOUT=20
+      # 并发合成数：1 表示串行，降低被上游限流的概率
+      - TTS_QUEUE=1
+      # 常驻文件白名单：列入的文件不参与任何清理，静音文件也必须显式列出
+      - TTS_KEEP_FILES=silence4s.mp3,silencestop.mp3
+      # 过期时长（秒）：客户端没来得及调 /prune 时，超过此时长的残留会被顺带删除
+      - TTS_PRUNE_TTL=3600
+      # 返回给调用方的 URL 前缀，必须是播放设备可达的地址
+      - TTS_BASE_URL=${TTS_BASE_URL:-http://localhost:8099}
+
+    restart: unless-stopped
+
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8099/healthz',timeout=3)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+```
+
+Three things to check: `TTS_BASE_URL` must be reachable from the playback device; `TTS_KEEP_FILES` is empty by default, so silence files need explicit listing; keep `TTS_QUEUE` at 1 to avoid upstream rate limits. See [Environment Variables](#environment-variables) for the full list.
 
 ### Common Commands
 
