@@ -1,6 +1,8 @@
 # edge-tts 语音合成服务
 
-[English](README.md) | **简体中文**
+🇺🇸 [English](README.md) | 🇨🇳 **简体中文**
+
+![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Python](https://img.shields.io/badge/python-3.12-3776AB.svg) ![Docker](https://img.shields.io/badge/docker-ready-2496ED.svg) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
 
 把 Microsoft Edge 的在线 TTS 封装成一个带缓存的 HTTP 接口，供语音播报类应用按需合成音频。
 

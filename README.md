@@ -1,6 +1,8 @@
 # edge-tts TTS Service
 
-**English** | [简体中文](README.zh.md)
+🇺🇸 **English** | 🇨🇳 [简体中文](README.zh.md)
+
+![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Python](https://img.shields.io/badge/python-3.12-3776AB.svg) ![Docker](https://img.shields.io/badge/docker-ready-2496ED.svg) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
 
 Wraps Microsoft Edge's online TTS into a cached HTTP endpoint, so speech-playback applications can synthesize audio on demand.
 
