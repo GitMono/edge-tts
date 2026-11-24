@@ -55,7 +55,7 @@ KEEP_FILES = {
 # 过期时间：超过这个时长仍未清理的残留（进程崩溃、超时、客户端漏调）会被顺带删除
 PRUNE_TTL = float(os.getenv("TTS_PRUNE_TTL", "3600"))
 
-app = FastAPI(title="edge-tts", version="1.0.8")
+app = FastAPI(title="edge-tts", version="1.0.0")
 
 # 合成闸门：微软接口对同 IP 有频率限制，默认串行，避免批量预生成时被 429/403
 _gate = asyncio.Semaphore(QUEUE)
