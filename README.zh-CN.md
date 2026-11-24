@@ -1,0 +1,172 @@
+# edge-tts 语音合成服务
+
+[English](README.md) | **简体中文**
+
+把 Microsoft Edge 的在线 TTS 封装成一个带缓存的 HTTP 接口，供语音播报类应用按需合成音频。
+
+面向的场景是「长文本分段播报」：调用方把一段话切成多段并发出多个合成请求，服务串行处理、按内容哈希缓存，客户端可以直接用返回的 URL 播放，重复文本不会重复消耗上游额度。
+
+## 特性
+
+- **内容哈希缓存**：文件名由 `md5(text|voice|rate)` 决定，同样的文本只合成一次
+- **串行合成**：默认并发数为 1，避免同一出口 IP 触发上游限流
+- **超时自适应**：按字数估算超时（每字 125ms，30–150 秒），长文本不会被过早切断
+- **失败重试**：单次合成最多尝试两次，仍失败才返回错误
+- **静态缓存目录**：`/cache/{file}.mp3` 可直接对外提供音频
+- **主动与被动清理**：客户端可调 `/prune` 保留指定文件，未清理的残留按 TTL 自动回收
+
+## 快速开始
+
+```bash
+docker build -t edge-tts:latest .
+docker run -d --name edge-tts -p 8099:8099 --restart unless-stopped \
+  -v "$PWD/cache":/cache \
+  -e TTS_BASE_URL=http://192.168.1.10:8099 \
+  edge-tts:latest
+```
+
+或用 compose（需先设置 `TTS_BASE_URL`）：
+
+```bash
+export TTS_BASE_URL=http://192.168.1.10:8099
+docker compose up -d
+```
+
+大陆网络构建可换源：
+
+```bash
+docker build --build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple -t edge-tts:latest .
+```
+
+## docker-compose
+
+`docker-compose.yml` 把镜像构建、端口映射、缓存卷和环境变量收敛到一处，适合长期部署。单次试跑用上面的 `docker run` 即可；需要开机自启、反复调参或与其他服务编排时用 compose。
+
+### 前置条件
+
+- Docker Engine 20.10+ 与 Compose V2（命令是 `docker compose`，不是 `docker-compose`）
+- 已设置 `TTS_BASE_URL`，值为**播放设备可达**的地址；未设置时默认 `http://localhost:8099`，设备将无法打开返回的音频链接
+- 宿主机 8099 端口未被占用
+
+### 配置说明
+
+| 项 | 取值 | 说明 |
+|---|---|---|
+| 服务名 | `edge-tts` | 单服务，容器名固定为 `edge-tts` |
+| 镜像 | `edge-tts:latest` | 配合 `build.context: .`，`up` 时本地构建，无需先手动 build |
+| 构建参数 | `PIP_INDEX_URL` | 从环境变量透传，大陆网络可设为清华源 |
+| 端口 | `8099:8099` | 宿主机与容器同端口；改成其他宿主机端口时，`TTS_BASE_URL` 要同步改 |
+| 数据卷 | `./cache:/cache` | 缓存落在项目目录下，容器重建不丢；容器内路径由 `TTS_CACHE_DIR` 决定 |
+| 关键环境变量 | `TTS_BASE_URL` | 返回给调用方的 URL 前缀，**必须设备可达** |
+| 其他环境变量 | `TTS_VOICE` / `TTS_RATE` | 音色与语速，compose 里已给默认值，可覆盖 |
+| 限流相关 | `TTS_QUEUE` / `TTS_TIMEOUT` | 并发数默认 1（串行）；超时基数 20 秒，按字数自动上浮 |
+| 健康检查 | `/healthz` | 每 30 秒探测一次，启动宽限 10 秒 |
+| 日志 | `json-file` | 单文件 10MB、最多 3 个，避免长期运行占满磁盘 |
+
+完整的变量清单见下方[环境变量](#环境变量)一节。
+
+### 常用操作
+
+```bash
+# 启动（首次会构建镜像）
+docker compose up -d
+
+# 查看状态与健康
+docker compose ps
+
+# 跟踪日志
+docker compose logs -f --tail=100
+
+# 停止并移除容器（保留缓存卷）
+docker compose down
+
+# 只停止，不删容器
+docker compose stop
+
+# 改了 server.py 或 Dockerfile 后重建
+docker compose up -d --build
+
+# 改了环境变量后重启生效
+docker compose up -d --force-recreate
+```
+
+### 注意事项
+
+- **缓存不要随手清**。`down -v` 会连同缓存卷一起删除，之后所有文本都要重新向上游合成，既慢又可能触发限流。日常用 `down` 即可，缓存文件留在 `./cache`。
+- **改端口要成对改**。只改 `ports` 而不改 `TTS_BASE_URL`，接口返回的链接仍指向旧端口，播放端会 404。
+- **首次启动等健康检查通过**。`up -d` 返回不代表服务可用，`docker compose ps` 看到 `healthy` 再调用接口；构建期 pip 安装较慢时，`start_period` 内的 `unhealthy` 属于正常过程。
+- **`TTS_QUEUE` 保持为 1**。上游对同一出口 IP 有频率限制，并发合成更容易触发 403；确实要提速时优先加大调用方的段长，而不是提高并发。
+
+### 故障排查
+
+| 现象 | 排查方向 |
+|---|---|
+| 接口返回的 URL 打不开 | `TTS_BASE_URL` 是否为设备可达地址、端口是否与 `ports` 一致 |
+| 合成返回 403 或频繁超时 | `TTS_QUEUE` 调回 1、检查出口 IP 是否被限流、适当加大 `TTS_TIMEOUT` |
+| 容器状态一直 `unhealthy` | `docker compose logs` 看 uvicorn 是否起来、8099 是否被占用 |
+| 缓存文件越来越多 | 调用方是否定期调 `/prune`；`TTS_PRUNE_TTL` 是否被设得过大 |
+| 静音文件消失导致播报异常 | 是否已把文件名加进 `TTS_KEEP_FILES`，见[关于静音文件](#关于静音文件) |
+
+## 接口
+
+### `POST /tts`
+
+合成一段文本。
+
+```json
+{"text": "要合成的文本", "voice": "zh-CN-XiaoxiaoNeural", "rate": "+5%"}
+```
+
+`voice`、`rate` 可省略，回退到环境变量。响应：
+
+```json
+{
+  "url": "http://192.168.1.10:8099/cache/4ec579b2a59878ee47ee6b4ebb54bcae.mp3",
+  "file": "4ec579b2a59878ee47ee6b4ebb54bcae.mp3",
+  "duration": 2.28,
+  "cached": false,
+  "chars": 9
+}
+```
+
+`duration` 为音频实际时长（秒），供调用方排期播放；`cached` 表示是否命中已有缓存。
+
+### `GET /cache/{name}.mp3`
+
+返回缓存的音频文件，仅接受 `[A-Za-z0-9]` 构成的文件名，防目录穿越。
+
+### `POST /prune`
+
+删除缓存中不在 `keep` 列表且超过宽限期的文件。
+
+```json
+{"keep": ["4ec579b2a59878ee47ee6b4ebb54bcae.mp3", "silence4s.mp3"]}
+```
+
+### `GET /healthz`
+
+```json
+{"ok": true, "edge_tts": "7.3.1", "files": 5, "queue": 1}
+```
+
+## 环境变量
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `TTS_VOICE` | `zh-CN-XiaoxiaoNeural` | 默认音色 |
+| `TTS_RATE` | `+0%` | 默认语速 |
+| `TTS_MAX_CHARS` | `8000` | 单次文本上限，超过返回 413 |
+| `TTS_CACHE_DIR` | `/cache` | 缓存目录 |
+| `TTS_TIMEOUT` | `20` | 合成超时基数（秒），实际按字数上浮 |
+| `TTS_QUEUE` | `1` | 并发合成数，1 为串行 |
+| `TTS_KEEP_FILES` | `silence4s.mp3` | 清理白名单，逗号分隔 |
+| `TTS_PRUNE_TTL` | `3600` | 残留文件过期时间（秒） |
+| `TTS_BASE_URL` | 空 | 返回 URL 的前缀，为空时按请求 Host 推断 |
+
+## 关于静音文件
+
+分段播报常在音频列表尾部追加静音，用于给停止指令留出窗口。这类文件由调用方自行生成并放入缓存目录，同时加进 `TTS_KEEP_FILES`，否则会被清理逻辑删除。
+
+## 许可
+
+[MIT](LICENSE)
