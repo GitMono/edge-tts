@@ -212,6 +212,33 @@ Deletes cached files that are not in `keep` and are older than the grace period.
 | `TTS_PRUNE_TTL` | `3600` | Age in seconds after which leftovers are reclaimed |
 | `TTS_BASE_URL` | empty | URL prefix for returned links; inferred from the request Host when empty |
 
+## Voices
+
+`TTS_VOICE` takes an edge-tts voice identifier. Upstream currently offers 318 voices across many languages; the 14 Chinese ones are listed below.
+
+| Voice | Gender | Use case | Style |
+|---|---|---|---|
+| `zh-CN-XiaoxiaoNeural` | Female | News, novel | Warm |
+| `zh-CN-XiaoyiNeural` | Female | Cartoon, novel | Lively |
+| `zh-CN-YunjianNeural` | Male | Sports, novel | Passionate |
+| `zh-CN-YunxiNeural` | Male | Novel | Lively, sunny |
+| `zh-CN-YunxiaNeural` | Male | Cartoon, novel | Cute |
+| `zh-CN-YunyangNeural` | Male | News | Professional, reliable |
+| `zh-CN-liaoning-XiaobeiNeural` | Female | Northeastern dialect | Humorous |
+| `zh-CN-shaanxi-XiaoniNeural` | Female | Shaanxi dialect | Bright |
+| `zh-HK-HiuGaaiNeural` | Female | Cantonese, general | Friendly |
+| `zh-HK-HiuMaanNeural` | Female | Cantonese, general | Friendly |
+| `zh-HK-WanLungNeural` | Male | Cantonese, general | Friendly |
+| `zh-TW-HsiaoChenNeural` | Female | Taiwanese, general | Friendly |
+| `zh-TW-HsiaoYuNeural` | Female | Taiwanese, general | Friendly |
+| `zh-TW-YunJheNeural` | Male | Taiwanese, general | Friendly |
+
+The catalog is maintained upstream, so names and counts shift between releases. List the current set:
+
+```bash
+python -m edge_tts --list-voices
+```
+
 ## About Persistent Files
 
 Files in the cache directory are reclaimed by `/prune` and the TTL sweep, with two exceptions: names passed in the caller's `keep` list, and names declared in `TTS_KEEP_FILES`.

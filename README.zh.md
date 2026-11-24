@@ -212,6 +212,33 @@ docker compose up -d --force-recreate
 | `TTS_PRUNE_TTL` | `3600` | 残留文件过期时间（秒） |
 | `TTS_BASE_URL` | 空 | 返回 URL 的前缀，为空时按请求 Host 推断 |
 
+## 音色
+
+`TTS_VOICE` 取 edge-tts 的音色标识。上游目前提供 318 个音色，覆盖多语种；下表是中文相关的 14 个。
+
+| 音色 | 性别 | 适用场景 | 风格 |
+|---|---|---|---|
+| `zh-CN-XiaoxiaoNeural` | 女 | 新闻、小说 | 温暖 |
+| `zh-CN-XiaoyiNeural` | 女 | 动画、小说 | 活泼 |
+| `zh-CN-YunjianNeural` | 男 | 体育、小说 | 激昂 |
+| `zh-CN-YunxiNeural` | 男 | 小说 | 活泼、阳光 |
+| `zh-CN-YunxiaNeural` | 男 | 动画、小说 | 可爱 |
+| `zh-CN-YunyangNeural` | 男 | 新闻 | 专业、可靠 |
+| `zh-CN-liaoning-XiaobeiNeural` | 女 | 东北方言 | 幽默 |
+| `zh-CN-shaanxi-XiaoniNeural` | 女 | 陕西方言 | 明亮 |
+| `zh-HK-HiuGaaiNeural` | 女 | 粤语通用 | 友好 |
+| `zh-HK-HiuMaanNeural` | 女 | 粤语通用 | 友好 |
+| `zh-HK-WanLungNeural` | 男 | 粤语通用 | 友好 |
+| `zh-TW-HsiaoChenNeural` | 女 | 台湾通用 | 友好 |
+| `zh-TW-HsiaoYuNeural` | 女 | 台湾通用 | 友好 |
+| `zh-TW-YunJheNeural` | 男 | 台湾通用 | 友好 |
+
+音色清单由上游维护，数量与名称会随版本变化。查询当前完整列表：
+
+```bash
+python -m edge_tts --list-voices
+```
+
 ## 关于常驻文件
 
 缓存目录里的文件默认会被 `/prune` 与 TTL 回收，只有两类例外：客户端在 `/prune` 的 `keep` 中指定保留的，以及通过 `TTS_KEEP_FILES` 声明的。
