@@ -1,0 +1,17 @@
+# 运行时缓存与产物
+cache/
+*.mp3
+*.tar
+dist/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 系统与编辑器
+.DS_Store
+.idea/
+.vscode/
+*.swp

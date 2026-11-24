@@ -1,0 +1,19 @@
+# 构建上下文排除项
+cache
+dist
+*.mp3
+*.tar
+
+__pycache__
+*.py[cod]
+.venv
+venv
+
+.git
+.gitignore
+.DS_Store
+.idea
+.vscode
+
+README.md
+LICENSE
