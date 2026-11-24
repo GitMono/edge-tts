@@ -93,7 +93,7 @@ services:
       - TTS_TIMEOUT=20
       # 并发合成数：1 表示串行，降低被上游限流的概率
       - TTS_QUEUE=1
-      # 常驻文件白名单：列入的文件不参与任何清理，静音文件也必须显式列出
+      # 常驻文件白名单：列入的文件不参与任何清理
       - TTS_KEEP_FILES=silence4s.mp3,silencestop.mp3
       # 过期时长（秒）：客户端没来得及调 /prune 时，超过此时长的残留会被顺带删除
       - TTS_PRUNE_TTL=3600
@@ -120,7 +120,7 @@ services:
         max-file: "3"
 ```
 
-三处需要确认：`TTS_BASE_URL` 必须是播放设备可达的地址；`TTS_KEEP_FILES` 默认为空，静音文件也要显式列出；`TTS_QUEUE` 保持 1 以避免触发上游限流。完整变量清单见[环境变量](#环境变量)。
+两处需要确认：`TTS_BASE_URL` 必须是播放设备可达的地址；`TTS_QUEUE` 保持 1 以避免触发上游限流。常驻文件按[关于常驻文件](#关于常驻文件)配置，完整变量清单见[环境变量](#环境变量)。
 
 ### 常用操作
 
@@ -162,7 +162,7 @@ docker compose up -d --force-recreate
 | 合成返回 403 或频繁超时 | `TTS_QUEUE` 调回 1、检查出口 IP 是否被限流、适当加大 `TTS_TIMEOUT` |
 | 容器状态一直 `unhealthy` | `docker compose logs` 看 uvicorn 是否起来、8099 是否被占用 |
 | 缓存文件越来越多 | 调用方是否定期调 `/prune`；`TTS_PRUNE_TTL` 是否被设得过大 |
-| 需要长期保留的文件被清理 | 是否已加进 `TTS_KEEP_FILES`（白名单默认为空，静音文件同样要显式列出） |
+| 需要长期保留的文件被清理 | 是否已加进 `TTS_KEEP_FILES`（白名单默认为空） |
 
 ## 接口
 

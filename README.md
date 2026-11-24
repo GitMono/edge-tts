@@ -93,7 +93,7 @@ services:
       - TTS_TIMEOUT=20
       # 并发合成数：1 表示串行，降低被上游限流的概率
       - TTS_QUEUE=1
-      # 常驻文件白名单：列入的文件不参与任何清理，静音文件也必须显式列出
+      # 常驻文件白名单：列入的文件不参与任何清理
       - TTS_KEEP_FILES=silence4s.mp3,silencestop.mp3
       # 过期时长（秒）：客户端没来得及调 /prune 时，超过此时长的残留会被顺带删除
       - TTS_PRUNE_TTL=3600
@@ -120,7 +120,7 @@ services:
         max-file: "3"
 ```
 
-Three things to check: `TTS_BASE_URL` must be reachable from the playback device; `TTS_KEEP_FILES` is empty by default, so silence files need explicit listing; keep `TTS_QUEUE` at 1 to avoid upstream rate limits. See [Environment Variables](#environment-variables) for the full list.
+Two things to check: `TTS_BASE_URL` must be reachable from the playback device; keep `TTS_QUEUE` at 1 to avoid upstream rate limits. Configure persistent files per [About Persistent Files](#about-persistent-files); see [Environment Variables](#environment-variables) for the full list.
 
 ### Common Commands
 
@@ -162,7 +162,7 @@ docker compose up -d --force-recreate
 | Synthesis returns 403 or times out often | Set `TTS_QUEUE` back to 1, check whether the egress IP is throttled, raise `TTS_TIMEOUT` |
 | Container stays `unhealthy` | `docker compose logs` to see whether uvicorn started, whether 8099 is occupied |
 | Cache keeps growing | Whether the caller invokes `/prune` periodically, and whether `TTS_PRUNE_TTL` is set too high |
-| Files that should persist get deleted | Whether they were added to `TTS_KEEP_FILES` (empty by default; silence files need explicit listing too) |
+| Files that should persist get deleted | Whether they were added to `TTS_KEEP_FILES` (empty by default) |
 
 ## API
 
