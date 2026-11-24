@@ -161,7 +161,7 @@ Deletes cached files that are not in `keep` and are older than the grace period.
 | `TTS_CACHE_DIR` | `/cache` | Cache directory |
 | `TTS_TIMEOUT` | `20` | Base synthesis timeout in seconds; scales up with text length |
 | `TTS_QUEUE` | `1` | Concurrent syntheses; 1 means serial |
-| `TTS_KEEP_FILES` | `silence4s.mp3` | Persistent-file whitelist, comma-separated; listed files are never cleaned up |
+| `TTS_KEEP_FILES` | empty | Persistent-file whitelist, comma-separated; listed files are never cleaned up |
 | `TTS_PRUNE_TTL` | `3600` | Age in seconds after which leftovers are reclaimed |
 | `TTS_BASE_URL` | empty | URL prefix for returned links; inferred from the request Host when empty |
 

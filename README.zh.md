@@ -161,7 +161,7 @@ docker compose up -d --force-recreate
 | `TTS_CACHE_DIR` | `/cache` | 缓存目录 |
 | `TTS_TIMEOUT` | `20` | 合成超时基数（秒），实际按字数上浮 |
 | `TTS_QUEUE` | `1` | 并发合成数，1 为串行 |
-| `TTS_KEEP_FILES` | `silence4s.mp3` | 常驻文件白名单，逗号分隔；列入者不参与任何清理 |
+| `TTS_KEEP_FILES` | 空 | 常驻文件白名单，逗号分隔；列入者不参与任何清理 |
 | `TTS_PRUNE_TTL` | `3600` | 残留文件过期时间（秒） |
 | `TTS_BASE_URL` | 空 | 返回 URL 的前缀，为空时按请求 Host 推断 |
 
