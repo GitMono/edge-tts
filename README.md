@@ -94,7 +94,7 @@ services:
       # 并发合成数：1 表示串行，降低被上游限流的概率
       - TTS_QUEUE=1
       # 常驻文件白名单：列入的文件不参与任何清理
-      - TTS_KEEP_FILES=silence4s.mp3,silencestop.mp3
+      - TTS_KEEP_FILES=prompt.mp3
       # 过期时长（秒）：客户端没来得及调 /prune 时，超过此时长的残留会被顺带删除
       - TTS_PRUNE_TTL=3600
       # 返回给调用方的 URL 前缀，必须是播放设备可达的地址
@@ -197,7 +197,7 @@ Serves a cached audio file. Only filenames made of `[A-Za-z0-9]` are accepted, w
 Deletes cached files that are not in `keep` and are older than the grace period.
 
 ```json
-{"keep": ["4ec579b2a59878ee47ee6b4ebb54bcae.mp3", "silence4s.mp3"]}
+{"keep": ["4ec579b2a59878ee47ee6b4ebb54bcae.mp3", "prompt.mp3"]}
 ```
 
 ### `GET /healthz`
@@ -224,10 +224,10 @@ Deletes cached files that are not in `keep` and are older than the grace period.
 
 Files in the cache directory are reclaimed by `/prune` and the TTL sweep, with two exceptions: names passed in the caller's `keep` list, and names declared in `TTS_KEEP_FILES`.
 
-The whitelist is empty by default, so every fixed asset you want to keep must be listed explicitly — including the silence files used by segmented playback:
+The whitelist is empty by default, so every fixed asset you want to keep must be listed explicitly:
 
 ```bash
-TTS_KEEP_FILES=silence4s.mp3,silencestop.mp3
+TTS_KEEP_FILES=prompt.mp3,intro.mp3
 ```
 
 If omitted, those files get reclaimed and the caller has to regenerate or re-synthesize them.

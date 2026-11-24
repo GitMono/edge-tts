@@ -94,7 +94,7 @@ services:
       # 并发合成数：1 表示串行，降低被上游限流的概率
       - TTS_QUEUE=1
       # 常驻文件白名单：列入的文件不参与任何清理
-      - TTS_KEEP_FILES=silence4s.mp3,silencestop.mp3
+      - TTS_KEEP_FILES=prompt.mp3
       # 过期时长（秒）：客户端没来得及调 /prune 时，超过此时长的残留会被顺带删除
       - TTS_PRUNE_TTL=3600
       # 返回给调用方的 URL 前缀，必须是播放设备可达的地址
@@ -197,7 +197,7 @@ docker compose up -d --force-recreate
 删除缓存中不在 `keep` 列表且超过宽限期的文件。
 
 ```json
-{"keep": ["4ec579b2a59878ee47ee6b4ebb54bcae.mp3", "silence4s.mp3"]}
+{"keep": ["4ec579b2a59878ee47ee6b4ebb54bcae.mp3", "prompt.mp3"]}
 ```
 
 ### `GET /healthz`
@@ -224,10 +224,10 @@ docker compose up -d --force-recreate
 
 缓存目录里的文件默认会被 `/prune` 与 TTL 回收，只有两类例外：客户端在 `/prune` 的 `keep` 中指定保留的，以及通过 `TTS_KEEP_FILES` 声明的。
 
-白名单默认为空，所有需要长期保留的固定素材都必须显式列出，包括分段播报使用的静音文件：
+白名单默认为空，需要长期保留的固定素材必须显式列出：
 
 ```bash
-TTS_KEEP_FILES=silence4s.mp3,silencestop.mp3
+TTS_KEEP_FILES=prompt.mp3,intro.mp3
 ```
 
 漏配的后果是这些文件被回收后，调用方需要重新生成或重新合成。
